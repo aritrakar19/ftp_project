@@ -1,18 +1,21 @@
 import axios from 'axios';
+import { getAuth } from 'firebase/auth';
+import { app } from '../firebase';
 
 const api = axios.create({
   baseURL: 'http://localhost:5000/api',
 });
 
-// Request interceptor for adding the bearer token
+// Request interceptor for adding the bearer token directly from Firebase
 api.interceptors.request.use(
-  (config) => {
-    const userInfo = localStorage.getItem('userInfo');
-    if (userInfo) {
-      const parsedUser = JSON.parse(userInfo);
-      if (parsedUser.token) {
-        config.headers.Authorization = `Bearer ${parsedUser.token}`;
-      }
+  async (config) => {
+    const auth = getAuth(app);
+    const user = auth.currentUser;
+    
+    if (user) {
+      // Gets the Firebase ID Token
+      const token = await user.getIdToken();
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },

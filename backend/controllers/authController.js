@@ -84,3 +84,30 @@ export const getUserProfile = async (req, res) => {
     res.status(404).json({ message: 'User not found' });
   }
 };
+
+// @desc    Google auth
+// @route   POST /api/auth/google
+// @access  Public
+export const googleLogin = async (req, res) => {
+  const { email, name, googleId } = req.body;
+  try {
+    let user = await User.findOne({ email });
+    if (user) {
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
+    } else {
+      user = await User.create({ name, email, googleId });
+    }
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

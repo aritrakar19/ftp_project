@@ -29,19 +29,17 @@ const Navbar = () => {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                {user.role === 'admin' && (
-                  <Link 
-                    to="/dashboard" 
-                    className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors"
-                  >
-                    <LayoutDashboard className="w-4 h-4" />
-                    <span className="hidden sm:inline">Dashboard</span>
-                  </Link>
-                )}
+                <Link 
+                  to="/dashboard" 
+                  className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span className="hidden sm:inline">Dashboard</span>
+                </Link>
                 <div className="h-8 w-px bg-gray-200 mx-2"></div>
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-medium text-gray-700 hidden sm:inline">
-                    {user.name}
+                    {user.displayName || user.email?.split('@')[0]}
                   </span>
                   <button
                     onClick={handleLogout}

@@ -2,14 +2,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
+import Signup from './pages/Signup';
 import GalleryPage from './pages/GalleryPage';
 import Dashboard from './pages/Dashboard';
 
-const ProtectedRoute = ({ children, adminOnly = false }) => {
+const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
 
   if (!user) return <Navigate to="/login" replace />;
-  if (adminOnly && user.role !== 'admin') return <Navigate to="/" replace />;
   
   return children;
 };
@@ -24,10 +24,11 @@ function App() {
             <Routes>
               <Route path="/" element={<GalleryPage />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
               <Route 
                 path="/dashboard" 
                 element={
-                  <ProtectedRoute adminOnly={true}>
+                  <ProtectedRoute>
                     <Dashboard />
                   </ProtectedRoute>
                 } 

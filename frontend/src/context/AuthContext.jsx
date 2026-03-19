@@ -1,5 +1,18 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import api from '../api/axios';
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signOut,
+  updateProfile
+} from "firebase/auth";
+import { app } from '../firebase'; // initialized in firebase.js
+
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
 const AuthContext = createContext();
 
@@ -10,31 +23,56 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const userInfo = localStorage.getItem('userInfo');
-    if (userInfo) {
-      setUser(JSON.parse(userInfo));
-    }
-    setLoading(false);
+    // Listen for Firebase Auth state changes
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = async (email, password) => {
     try {
-      const { data } = await api.post('/auth/login', { email, password });
-      setUser(data);
-      localStorage.setItem('userInfo', JSON.stringify(data));
+      await signInWithEmailAndPassword(auth, email, password);
       return { success: true };
     } catch (error) {
-      return { success: false, message: error.response?.data?.message || 'Login failed' };
+      return { success: false, message: error.message };
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('userInfo');
+  const signup = async (name, email, password) => {
+    try {
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      // Update display name
+      await updateProfile(result.user, { displayName: name });
+      // To propagate the updated name into the current session state natively
+      setUser({ ...result.user, displayName: name });
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  };
+
+  const googleSignIn = async () => {
+    try {
+      await signInWithPopup(auth, provider);
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Failed to log out", error);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, signup, googleSignIn, logout, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

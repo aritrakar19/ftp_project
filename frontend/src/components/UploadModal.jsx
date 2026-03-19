@@ -4,7 +4,7 @@ import { UploadCloud, X, Image as ImageIcon } from 'lucide-react';
 import api from '../api/axios';
 
 const UploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [title, setTitle] = useState('');
   const [tags, setTags] = useState('');
   const [event, setEvent] = useState('');
@@ -12,21 +12,21 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
   const [error, setError] = useState('');
 
   const onDrop = useCallback(acceptedFiles => {
-    if (acceptedFiles[0]) {
-      setFile(acceptedFiles[0]);
+    if (acceptedFiles?.length > 0) {
+      setFiles(prev => [...prev, ...acceptedFiles]);
     }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.webp'] },
-    multiple: false
+    multiple: true
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) {
-      setError('Please select an image to upload');
+    if (files.length === 0) {
+      setError('Please select at least one image to upload');
       return;
     }
 
@@ -34,13 +34,14 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
     setError('');
 
     const formData = new FormData();
-    formData.append('image', file);
+    // Assuming backend will be updated to handle multiple 'images'
+    files.forEach(f => formData.append('images', f));
     formData.append('title', title);
     formData.append('tags', tags);
     formData.append('event', event);
 
     try {
-      await api.post('/images', formData, {
+      await api.post('/ftp-images/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
@@ -49,13 +50,31 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
       onUploadSuccess();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to upload image');
-      setUploading(false);
+      // Provide fallback using loop if backend only supports single uploads for now
+      try {
+        const uploadPromises = files.map(f => {
+          const singleData = new FormData();
+          singleData.append('image', f);
+          singleData.append('title', title);
+          singleData.append('tags', tags);
+          singleData.append('event', event);
+          return api.post('/images', singleData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        });
+        await Promise.all(uploadPromises);
+        
+        setUploading(false);
+        resetForm();
+        onUploadSuccess();
+        onClose();
+      } catch (fallbackErr) {
+        setError(fallbackErr.response?.data?.message || err.response?.data?.message || 'Failed to upload images');
+        setUploading(false);
+      }
     }
   };
 
   const resetForm = () => {
-    setFile(null);
+    setFiles([]);
     setTitle('');
     setTags('');
     setEvent('');
@@ -97,19 +116,28 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess }) => {
               >
                 <input {...getInputProps()} />
                 
-                {file ? (
+                {files.length > 0 ? (
                   <div className="flex flex-col items-center">
                     <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-3">
                       <ImageIcon className="w-8 h-8" />
                     </div>
-                    <p className="font-medium text-gray-900 truncate max-w-full">{file.name}</p>
-                    <p className="text-xs text-gray-500 mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    <p className="font-medium text-gray-900 truncate max-w-full">{files.length} file(s) selected</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {files.map(f => f.name).join(', ').substring(0, 50)}...
+                    </p>
+                    <button 
+                      type="button" 
+                      onClick={(e) => { e.stopPropagation(); setFiles([]); }}
+                      className="mt-3 text-sm text-red-500 hover:text-red-700"
+                    >
+                      Clear selection
+                    </button>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center flex flex-col items-center text-gray-500">
                     <UploadCloud className="w-12 h-12 mb-3 text-gray-400" />
-                    <p className="text-sm">Drag & drop an image here, or click to select</p>
-                    <p className="text-xs mt-2 text-gray-400">Supports JPG, PNG, WEBP</p>
+                    <p className="text-sm">Drag & drop images here, or click to select multiple</p>
+                    <p className="text-xs mt-2 text-gray-400">Supports JPG, PNG, WEBP (Select multiple)</p>
                   </div>
                 )}
               </div>
