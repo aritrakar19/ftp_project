@@ -5,7 +5,10 @@ import Gallery from '../models/Gallery.js';
 // @access  Public
 export const getGalleries = async (req, res) => {
   try {
-    const galleries = await Gallery.find({}).populate('createdBy', 'name');
+    const query = req.user.role === 'admin'
+      ? {}
+      : { $or: [{ createdBy: req.user._id }, { allowedUsers: req.user._id }] };
+    const galleries = await Gallery.find(query).populate('createdBy', 'name');
     res.json(galleries);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -16,13 +19,14 @@ export const getGalleries = async (req, res) => {
 // @route   POST /api/galleries
 // @access  Private/Admin
 export const createGallery = async (req, res) => {
-  const { title, description, coverImage } = req.body;
+  const { title, description, coverImage, allowedUsers } = req.body;
 
   try {
     const gallery = new Gallery({
       title,
       description,
       coverImage,
+      allowedUsers: allowedUsers || [],
       createdBy: req.user._id,
     });
 

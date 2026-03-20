@@ -60,6 +60,7 @@ export const uploadImage = async (req, res) => {
 // @route   GET /api/images
 // @access  Public
 export const getImages = async (req, res) => {
+  const Gallery = (await import('../models/Gallery.js')).default;
   const pageSize = Number(req.query.pageSize) || 12;
   const page = Number(req.query.pageNumber) || 1;
 
@@ -73,11 +74,27 @@ export const getImages = async (req, res) => {
       }
     : {};
 
-  if (req.query.galleryId) {
-    keyword.galleryId = req.query.galleryId;
-  }
-
   try {
+    let allowedGalleryIds = [];
+    if (req.user.role !== 'admin') {
+      const galleries = await Gallery.find({
+        $or: [{ createdBy: req.user._id }, { allowedUsers: req.user._id }]
+      }).select('_id');
+      allowedGalleryIds = galleries.map(g => g._id);
+    } else {
+      const galleries = await Gallery.find({}).select('_id');
+      allowedGalleryIds = galleries.map(g => g._id);
+    }
+
+    if (req.query.galleryId) {
+      if (req.user.role !== 'admin' && !allowedGalleryIds.some(id => id.toString() === req.query.galleryId)) {
+        return res.status(403).json({ message: 'Access denied to this gallery' });
+      }
+      keyword.galleryId = req.query.galleryId;
+    } else {
+      keyword.galleryId = { $in: allowedGalleryIds };
+    }
+
     const count = await Image.countDocuments({ ...keyword });
     const images = await Image.find({ ...keyword })
       .populate('uploadedBy', 'name')
@@ -97,8 +114,15 @@ export const getImages = async (req, res) => {
 // @access  Private
 export const logDownload = async (req, res) => {
   try {
-    const image = await Image.findById(req.params.id);
+    const image = await Image.findById(req.params.id).populate('galleryId');
     if (!image) return res.status(404).json({ message: 'Image not found' });
+
+    if (req.user.role !== 'admin') {
+      const isAllowed = image.galleryId && image.galleryId.allowedUsers && image.galleryId.allowedUsers.includes(req.user._id);
+      if (!isAllowed) {
+        return res.status(403).json({ message: 'Not authorized to download this image' });
+      }
+    }
 
     const log = new DownloadLog({
       imageId: req.params.id,

@@ -14,13 +14,20 @@ export const protect = async (req, res, next) => {
       
       if (!decoded) throw new Error('Invalid token');
 
-      // Map Firebase properties to req.user for image uploads
-      req.user = { 
-        _id: decoded.user_id || decoded.sub, 
-        name: decoded.name || decoded.email?.split('@')[0],
-        email: decoded.email,
-        role: 'admin' // Granting baseline role to bypass admin checks securely for logged in users
-      };
+      // Fetch user from DB or create if doesn't exist (syncing Firebase to MongoDB)
+      const User = (await import('../models/User.js')).default;
+      let dbUser = await User.findOne({ email: decoded.email });
+      
+      if (!dbUser) {
+        dbUser = await User.create({
+          name: decoded.name || (decoded.email ? decoded.email.split('@')[0] : 'Unknown'),
+          email: decoded.email,
+          googleId: decoded.user_id || decoded.sub,
+          role: 'client' // default role
+        });
+      }
+
+      req.user = dbUser;
       next();
     } catch (error) {
       console.error(error);
