@@ -9,41 +9,61 @@ export const protect = async (req, res, next) => {
   ) {
     try {
       token = req.headers.authorization.split(' ')[1];
-      // Decode the Firebase JWT token
-      const decoded = jwt.decode(token);
+      console.log('Incoming Auth Token Header:', req.headers.authorization.substring(0, 20) + '...');
       
-      if (!decoded) throw new Error('Invalid token');
-
-      // Fetch user from DB or create if doesn't exist (syncing Firebase to MongoDB)
       const User = (await import('../models/User.js')).default;
-      let dbUser = await User.findOne({ email: decoded.email });
+      let dbUser;
+
       
+      // Attempt 1: Verify as local backend JWT using secret
+      try {
+        const decodedLocal = jwt.verify(token, process.env.JWT_SECRET);
+        if (decodedLocal.id) {
+          dbUser = await User.findById(decodedLocal.id).select('-password');
+        }
+      } catch (verifyError) {
+        // Ignored: Not a local token, might be a Firebase token
+      }
+
+      // Attempt 2: Fallback to Firebase JWT decoding if no dbUser yet
       if (!dbUser) {
-        dbUser = await User.create({
-          name: decoded.name || (decoded.email ? decoded.email.split('@')[0] : 'Unknown'),
-          email: decoded.email,
-          googleId: decoded.user_id || decoded.sub,
-          role: 'client' // default role
-        });
+        const decodedFirebase = jwt.decode(token);
+        if (!decodedFirebase || !decodedFirebase.email) {
+          throw new Error('Invalid token format');
+        }
+
+        dbUser = await User.findOne({ email: decodedFirebase.email }).select('-password');
+
+        // Sync Firebase auth to DB if user doesn't exist
+        if (!dbUser) {
+          dbUser = await User.create({
+            name: decodedFirebase.name || decodedFirebase.email.split('@')[0],
+            email: decodedFirebase.email,
+            googleId: decodedFirebase.user_id || decodedFirebase.sub,
+            role: 'client',
+          });
+        }
+      }
+
+      if (!dbUser) {
+        return res.status(401).json({ message: 'User not found in system' });
       }
 
       req.user = dbUser;
-      next();
+      return next();
     } catch (error) {
-      console.error(error);
-      res.status(401).json({ message: 'Not authorized, token failed' });
+      console.error('Auth middleware error:', error.message);
+      return res.status(401).json({ message: 'Not authorized, token failed' });
     }
-  }
-
-  if (!token) {
-    res.status(401).json({ message: 'Not authorized, no token' });
+  } else {
+    // No Authorization header at all
+    return res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
 
 export const admin = (req, res, next) => {
-  if (req.user) {
-    next();
-  } else {
-    res.status(401).json({ message: 'Not authorized' });
+  if (req.user && req.user.role === 'admin') {
+    return next();
   }
+  return res.status(403).json({ message: 'Not authorized as admin' });
 };

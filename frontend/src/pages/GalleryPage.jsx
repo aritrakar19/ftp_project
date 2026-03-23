@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Search } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { Search, Sparkles } from 'lucide-react';
 import ImageGallery from '../components/ImageGallery';
 import api from '../api/axios';
 
 const GalleryPage = () => {
-  const [images, setImages] = useState([]);
-  const [keyword, setKeyword] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [images, setImages]           = useState([]);
+  const [keyword, setKeyword]         = useState('');
+  const [loading, setLoading]         = useState(true);
+  const [page, setPage]               = useState(1);
+  const [totalPages, setTotalPages]   = useState(1);
   const [fetchingMore, setFetchingMore] = useState(false);
 
   const fetchImages = useCallback(async (pageNum = 1, searchQuery = '') => {
@@ -17,77 +17,101 @@ const GalleryPage = () => {
       else setFetchingMore(true);
 
       const { data } = await api.get(`/images?pageNumber=${pageNum}&keyword=${searchQuery}`);
-      
-      if (pageNum === 1) {
-        setImages(data.images);
-      } else {
-        setImages((prev) => [...prev, ...data.images]);
-      }
-      
+      if (pageNum === 1) setImages(data.images);
+      else setImages(prev => [...prev, ...data.images]);
       setTotalPages(data.pages);
-      setLoading(false);
-      setFetchingMore(false);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
+    } finally {
       setLoading(false);
       setFetchingMore(false);
     }
   }, []);
 
   useEffect(() => {
-    const delayDebounce = setTimeout(() => {
-      setPage(1);
-      fetchImages(1, keyword);
-    }, 500);
-
-    return () => clearTimeout(delayDebounce);
+    const t = setTimeout(() => { setPage(1); fetchImages(1, keyword); }, 500);
+    return () => clearTimeout(t);
   }, [keyword, fetchImages]);
 
   const loadMore = () => {
     if (page < totalPages) {
-      setPage((prev) => prev + 1);
+      setPage(p => p + 1);
       fetchImages(page + 1, keyword);
     }
   };
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100 gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Discover Collections</h1>
-          <p className="text-gray-500 mt-1">Explore carefully curated high-quality images</p>
-        </div>
-        
-        <div className="w-full md:w-96 relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+
+      {/* ── Hero header ── */}
+      <div
+        className="relative glass rounded-2xl p-8 overflow-hidden"
+        style={{ boxShadow: '0 8px 32px rgb(139 92 246 / 0.15)' }}
+      >
+        {/* background glow */}
+        <div
+          className="absolute -top-20 -right-20 w-72 h-72 rounded-full blur-3xl pointer-events-none"
+          style={{ background: 'radial-gradient(circle,rgb(139 92 246/0.2),transparent)' }}
+          aria-hidden
+        />
+
+        <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-5 h-5" style={{ color: '#a78bfa' }} />
+              <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#a78bfa' }}>
+                Collections
+              </span>
+            </div>
+            <h1 className="text-4xl font-extrabold tracking-tight text-white leading-tight">
+              Discover Images
+            </h1>
+            <p className="mt-2 text-sm" style={{ color: 'rgb(148 150 180)' }}>
+              Explore carefully curated high‑quality photos
+            </p>
           </div>
-          <input
-            type="text"
-            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none bg-gray-50 focus:bg-white"
-            placeholder="Search by tags, events, or keywords..."
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-          />
+
+          {/* Search */}
+          <div className="w-full md:w-80 relative flex-shrink-0">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'rgb(148 150 180)' }} />
+            <input
+              id="gallery-search"
+              type="text"
+              className="field pl-10"
+              placeholder="Search by tags, events…"
+              value={keyword}
+              onChange={e => setKeyword(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
+      {/* ── Gallery ── */}
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          <div className="spin-ring" />
         </div>
       ) : (
         <>
           <ImageGallery images={images} />
-          
+
           {page < totalPages && (
-            <div className="flex justify-center pt-8 pb-4">
+            <div className="flex justify-center pt-6 pb-4">
               <button
+                id="load-more-btn"
                 onClick={loadMore}
                 disabled={fetchingMore}
-                className="bg-white border rounded-full px-6 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="btn-ghost px-8 py-3 disabled:opacity-50"
               >
-                {fetchingMore ? 'Loading more...' : 'Load More'}
+                {fetchingMore ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Loading…
+                  </span>
+                ) : 'Load More'}
               </button>
             </div>
           )}

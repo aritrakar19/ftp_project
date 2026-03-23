@@ -1,62 +1,123 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Camera, LogOut, LayoutDashboard } from 'lucide-react';
+import { Camera, LogOut, LayoutDashboard, Grid3X3, Images } from 'lucide-react';
+
+const NAV_LINKS = [
+  { to: '/galleries', label: 'Galleries', icon: Grid3X3 },
+  { to: '/browse',    label: 'Browse',    icon: Images },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+];
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate('/login');
   };
 
+  const initials = user
+    ? (user.displayName || user.email || '?')[0].toUpperCase()
+    : null;
+
   return (
-    <nav className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-50">
+    <nav
+      className="sticky top-0 z-50 border-b"
+      style={{
+        background: 'rgb(15 15 25 / 0.82)',
+        backdropFilter: 'blur(20px)',
+        borderColor: 'rgb(255 255 255 / 0.07)',
+      }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center gap-2 group">
-              <div className="bg-indigo-600 p-2 rounded-lg group-hover:bg-indigo-700 transition-colors">
-                <Camera className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-xl tracking-tight text-gray-900">
-                Gallery<span className="text-indigo-600">Pro</span>
-              </span>
-            </Link>
-          </div>
-          
-          <div className="flex items-center gap-4">
+        <div className="flex justify-between h-16 items-center">
+
+          {/* ── Brand ── */}
+          <Link to="/galleries" className="flex items-center gap-2.5 group">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105"
+              style={{
+                background: 'linear-gradient(135deg,#8b5cf6,#6366f1)',
+                boxShadow: '0 0 16px rgb(139 92 246 / 0.5)',
+              }}
+            >
+              <Camera className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-bold text-xl tracking-tight text-white">
+              Gallery<span className="gradient-text">Pro</span>
+            </span>
+          </Link>
+
+          {/* ── Right side ── */}
+          <div className="flex items-center gap-1">
             {user ? (
               <>
-                <Link 
-                  to="/dashboard" 
-                  className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  <span className="hidden sm:inline">Dashboard</span>
-                </Link>
-                <div className="h-8 w-px bg-gray-200 mx-2"></div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-gray-700 hidden sm:inline">
-                    {user.displayName || user.email?.split('@')[0]}
-                  </span>
-                  <button
-                    onClick={handleLogout}
-                    className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors focus:outline-none"
-                    title="Logout"
-                  >
-                    <LogOut className="w-5 h-5" />
-                  </button>
+                {/* Nav links — desktop */}
+                <div className="hidden sm:flex items-center gap-1 mr-2">
+                  {NAV_LINKS.map(({ to, label, icon: Icon }) => {
+                    const active = pathname === to || (to !== '/galleries' && pathname.startsWith(to));
+                    return (
+                      <Link
+                        key={to}
+                        to={to}
+                        className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-all duration-200"
+                        style={{
+                          color: active ? '#a78bfa' : 'rgb(148 150 180)',
+                          background: active ? 'rgb(139 92 246 / 0.12)' : 'transparent',
+                        }}
+                        onMouseEnter={e => {
+                          if (!active) e.currentTarget.style.color = 'rgb(248 248 255)';
+                        }}
+                        onMouseLeave={e => {
+                          if (!active) e.currentTarget.style.color = 'rgb(148 150 180)';
+                        }}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {label}
+                      </Link>
+                    );
+                  })}
                 </div>
+
+                {/* divider */}
+                <div className="hidden sm:block w-px h-6 mx-1" style={{ background: 'rgb(255 255 255 / 0.1)' }} />
+
+                {/* Avatar */}
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white select-none"
+                  style={{ background: 'linear-gradient(135deg,#8b5cf6,#6366f1)' }}
+                  title={user.displayName || user.email}
+                >
+                  {initials}
+                </div>
+
+                <button
+                  onClick={handleLogout}
+                  id="nav-logout-btn"
+                  title="Logout"
+                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200"
+                  style={{ color: 'rgb(148 150 180)', border: '1px solid rgb(255 255 255 / 0.08)' }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = '#f87171';
+                    e.currentTarget.style.background = 'rgb(239 68 68 / 0.1)';
+                    e.currentTarget.style.borderColor = 'rgb(239 68 68 / 0.25)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = 'rgb(148 150 180)';
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = 'rgb(255 255 255 / 0.08)';
+                  }}
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </>
             ) : (
-              <Link 
-                to="/login" 
-                className="text-sm font-medium px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
-              >
-                Sign In
-              </Link>
+              <>
+                <Link to="/login" className="btn-ghost text-sm">Sign In</Link>
+                <Link to="/signup" className="btn-primary text-sm ml-1">Get Started</Link>
+              </>
             )}
           </div>
         </div>

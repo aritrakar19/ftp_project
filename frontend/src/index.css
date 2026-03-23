@@ -1,13 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --brand: 139 92 246;
+    /* violet-500 */
+    --brand-dark: 109 40 217;
+    /* violet-700 */
+    --accent: 99 102 241;
+    /* indigo-500 */
+    --surface: 15 15 25;
+    /* near-black bg */
+    --surface-2: 22 22 36;
+    --surface-3: 30 30 48;
+    --border: 255 255 255 / 0.08;
+    --text-primary: 248 248 255;
+    --text-muted: 148 150 180;
+  }
+
+  * {
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--brand) / 0.4) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: rgb(var(--brand) / 0.45);
+    border-radius: 99px;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    @apply bg-gray-50 text-gray-900;
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: rgb(var(--surface));
+    color: rgb(var(--text-primary));
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
   }
 }
 
+/* ─── Masonry grid ─────────────────────────────────────────── */
 .masonry-grid {
   column-count: 1;
   column-gap: 1rem;
@@ -36,11 +79,190 @@
   margin-bottom: 1rem;
 }
 
+/* ─── Hover-reveal overlay ─────────────────────────────────── */
 .hover-trigger .hover-target {
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.32s ease;
 }
 
 .hover-trigger:hover .hover-target {
   opacity: 1;
+}
+
+/* ─── Glass card ────────────────────────────────────────────── */
+.glass {
+  background: rgb(255 255 255 / 0.04);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgb(var(--border));
+}
+
+.glass-strong {
+  background: rgb(255 255 255 / 0.07);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgb(var(--border));
+}
+
+/* ─── Gradient backgrounds ──────────────────────────────────── */
+.bg-app {
+  background:
+    radial-gradient(ellipse 80% 60% at 10% -10%, rgb(139 92 246 / 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 90% 110%, rgb(99 102 241 / 0.12) 0%, transparent 60%),
+    rgb(var(--surface));
+}
+
+/* ─── Glow button ───────────────────────────────────────────── */
+.btn-primary {
+  @apply relative overflow-hidden inline-flex items-center justify-center gap-2 font-semibold text-white rounded-xl px-5 py-2.5 text-sm transition-all duration-200;
+  background: linear-gradient(135deg, rgb(139 92 246), rgb(99 102 241));
+  box-shadow: 0 0 20px rgb(139 92 246 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.15);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 32px rgb(139 92 246 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.2);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 font-medium rounded-xl px-5 py-2.5 text-sm transition-all duration-200;
+  color: rgb(var(--text-muted));
+  background: transparent;
+  border: 1px solid rgb(var(--border));
+}
+
+.btn-ghost:hover {
+  background: rgb(255 255 255 / 0.06);
+  color: rgb(var(--text-primary));
+}
+
+/* ─── Input fields ──────────────────────────────────────────── */
+.field {
+  @apply w-full text-sm rounded-xl px-4 py-3 outline-none transition-all duration-200;
+  background: rgb(255 255 255 / 0.05);
+  border: 1px solid rgb(255 255 255 / 0.1);
+  color: rgb(var(--text-primary));
+}
+
+.field::placeholder {
+  color: rgb(var(--text-muted));
+}
+
+.field:focus {
+  border-color: rgb(var(--brand) / 0.7);
+  box-shadow: 0 0 0 3px rgb(var(--brand) / 0.15);
+  background: rgb(255 255 255 / 0.07);
+}
+
+/* ─── Animated gradient text ────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #a78bfa, #818cf8, #6ee7b7);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 6s ease infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ─── Pulse dot ──────────────────────────────────────────────── */
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgb(16 185 129 / 0.7);
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgb(16 185 129 / 0.7);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgb(16 185 129 / 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgb(16 185 129 / 0);
+  }
+}
+
+/* ─── Spin loader ────────────────────────────────────────────── */
+.spin-ring {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid rgb(var(--brand) / 0.2);
+  border-top-color: rgb(var(--brand));
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ─── Tag badge ──────────────────────────────────────────────── */
+.tag {
+  @apply inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded-full;
+  background: rgb(var(--brand) / 0.15);
+  color: rgb(167 139 250);
+  border: 1px solid rgb(var(--brand) / 0.2);
+}
+
+/* ─── Stat card glow ─────────────────────────────────────────── */
+.stat-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top left, rgb(var(--brand) / 0.12), transparent 70%);
+  pointer-events: none;
+}
+
+/* ─── Gallery card ───────────────────────────────────────────── */
+.gallery-card {
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid rgb(255 255 255 / 0.07);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.gallery-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.35), 0 0 0 1px rgb(139 92 246 / 0.25);
+  border-color: rgb(139 92 246 / 0.3);
+}
+
+/* ─── Scrollbar hide ─────────────────────────────────────────── */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }

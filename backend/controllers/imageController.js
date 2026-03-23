@@ -58,47 +58,66 @@ export const uploadImage = async (req, res) => {
 
 // @desc    Get all images with pagination and search
 // @route   GET /api/images
-// @access  Public
+// @access  Private
 export const getImages = async (req, res) => {
   const Gallery = (await import('../models/Gallery.js')).default;
   const pageSize = Number(req.query.pageSize) || 12;
-  const page = Number(req.query.pageNumber) || 1;
-
-  const keyword = req.query.keyword
-    ? {
-        $or: [
-          { title: { $regex: req.query.keyword, $options: 'i' } },
-          { tags: { $in: [new RegExp(req.query.keyword, 'i')] } },
-          { event: { $regex: req.query.keyword, $options: 'i' } }
-        ]
-      }
-    : {};
+  const page     = Number(req.query.pageNumber) || 1;
 
   try {
+    /* ── 1. Collect allowed gallery IDs ── */
     let allowedGalleryIds = [];
-    if (req.user.role !== 'admin') {
-      const galleries = await Gallery.find({
-        $or: [{ createdBy: req.user._id }, { allowedUsers: req.user._id }]
-      }).select('_id');
-      allowedGalleryIds = galleries.map(g => g._id);
+    if (req.user.role === 'admin') {
+      const all = await Gallery.find({}).select('_id');
+      allowedGalleryIds = all.map(g => g._id);
     } else {
-      const galleries = await Gallery.find({}).select('_id');
-      allowedGalleryIds = galleries.map(g => g._id);
+      const mine = await Gallery.find({
+        $or: [{ createdBy: req.user._id }, { allowedUsers: req.user._id }],
+      }).select('_id');
+      allowedGalleryIds = mine.map(g => g._id);
     }
 
+    /* ── 2. Visibility clause ── */
+    let visibilityClause;
     if (req.query.galleryId) {
-      if (req.user.role !== 'admin' && !allowedGalleryIds.some(id => id.toString() === req.query.galleryId)) {
+      // Specific gallery — verify access
+      if (
+        req.user.role !== 'admin' &&
+        !allowedGalleryIds.some(id => id.toString() === req.query.galleryId)
+      ) {
         return res.status(403).json({ message: 'Access denied to this gallery' });
       }
-      keyword.galleryId = req.query.galleryId;
+      visibilityClause = { galleryId: req.query.galleryId };
     } else {
-      keyword.galleryId = { $in: allowedGalleryIds };
+      // Allowed galleries + own no-gallery uploads
+      visibilityClause = {
+        $or: [
+          { galleryId: { $in: allowedGalleryIds } },
+          { galleryId: null, uploadedBy: req.user._id },
+        ],
+      };
     }
 
-    const count = await Image.countDocuments({ ...keyword });
-    const images = await Image.find({ ...keyword })
+    /* ── 3. Keyword clause (optional) ── */
+    const keywordClause = req.query.keyword
+      ? {
+          $or: [
+            { title: { $regex: req.query.keyword, $options: 'i' } },
+            { tags:  { $in:   [new RegExp(req.query.keyword, 'i')] } },
+            { event: { $regex: req.query.keyword, $options: 'i' } },
+          ],
+        }
+      : null;
+
+    /* ── 4. Combine with $and ── */
+    const filter = keywordClause
+      ? { $and: [visibilityClause, keywordClause] }
+      : visibilityClause;
+
+    const count  = await Image.countDocuments(filter);
+    const images = await Image.find(filter)
       .populate('uploadedBy', 'name')
-      .populate('galleryId', 'title')
+      .populate('galleryId',  'title')
       .limit(pageSize)
       .skip(pageSize * (page - 1))
       .sort({ createdAt: -1 });
@@ -108,6 +127,7 @@ export const getImages = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // @desc    Log image download
 // @route   POST /api/images/:id/download

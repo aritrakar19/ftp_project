@@ -1,15 +1,38 @@
 import Gallery from '../models/Gallery.js';
+import Image from '../models/Image.js';
 
-// @desc    Get all galleries
+// @desc    Get all galleries (with image counts)
 // @route   GET /api/galleries
-// @access  Public
+// @access  Private
 export const getGalleries = async (req, res) => {
   try {
     const query = req.user.role === 'admin'
       ? {}
       : { $or: [{ createdBy: req.user._id }, { allowedUsers: req.user._id }] };
-    const galleries = await Gallery.find(query).populate('createdBy', 'name');
-    res.json(galleries);
+
+    const galleries = await Gallery.find(query)
+      .populate('createdBy', 'name')
+      .sort({ createdAt: -1 });
+
+    // Attach image count to each gallery
+    const galleriesWithCount = await Promise.all(
+      galleries.map(async (g) => {
+        const imageCount = await Image.countDocuments({ galleryId: g._id });
+        // Resolve coverImage: if no coverImage set, pick the latest image's thumbnailUrl
+        let resolvedCover = g.coverImage || null;
+        if (!resolvedCover) {
+          const latest = await Image.findOne({ galleryId: g._id }).sort({ createdAt: -1 }).select('thumbnailUrl url');
+          if (latest) resolvedCover = latest.thumbnailUrl || latest.url;
+        }
+        return {
+          ...g.toObject(),
+          imageCount,
+          resolvedCover,
+        };
+      })
+    );
+
+    res.json(galleriesWithCount);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -17,15 +40,17 @@ export const getGalleries = async (req, res) => {
 
 // @desc    Create a gallery
 // @route   POST /api/galleries
-// @access  Private/Admin
+// @access  Private
 export const createGallery = async (req, res) => {
-  const { title, description, coverImage, allowedUsers } = req.body;
+  const { title, description, coverImage, allowedUsers, isPrivate, category } = req.body;
 
   try {
     const gallery = new Gallery({
       title,
       description,
       coverImage,
+      isPrivate: !!isPrivate,
+      category: category || 'Other',
       allowedUsers: allowedUsers || [],
       createdBy: req.user._id,
     });
