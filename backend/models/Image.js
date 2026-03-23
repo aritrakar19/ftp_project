@@ -8,6 +8,7 @@ const imageSchema = new mongoose.Schema({
   event: { type: String },
   galleryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Gallery' },
   uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  allowedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   metadata: {
     size: Number,
     format: String,

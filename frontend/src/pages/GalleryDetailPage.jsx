@@ -6,6 +6,8 @@ import Lightbox from 'yet-another-react-lightbox';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import Download from 'yet-another-react-lightbox/plugins/download';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 /* ─── Skeleton ──────────────────────────────────────────────────── */
 const Skeleton = () => (
@@ -15,6 +17,8 @@ const Skeleton = () => (
 /* ─── GalleryDetailPage ─────────────────────────────────────────── */
 const GalleryDetailPage = () => {
   const { id } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [gallery, setGallery]       = useState(null);
   const [images, setImages]         = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -70,15 +74,39 @@ const GalleryDetailPage = () => {
   );
 
   const slides = filtered.map(img => ({
-    src: `http://localhost:5000${img.url}`,
+    src: `http://localhost:5001${img.url}`,
     title: img.title || 'Untitled',
     description: img.tags?.join(', ') || '',
     imageId: img._id,
   }));
 
   const handleDownload = async (url, id) => {
-    try { await api.post(`/images/${id}/download`); }
-    catch (err) { console.error('Download log failed', err); }
+    if (!user) {
+      alert("Please log in to download images.");
+      navigate('/login');
+      return;
+    }
+    try {
+      await api.post(`/images/${id}/download`);
+      // Force download via Blob to avoid cross-origin new tab opening
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = url.split('/').pop() || 'image';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        alert("Access Denied: You do not have permission to download this image. Please request access from an admin.");
+      } else {
+        alert("Download failed. Please try again later.");
+      }
+    }
   };
 
   /* ── Loading ── */
@@ -196,7 +224,7 @@ const GalleryDetailPage = () => {
                 >
                   <LazyLoadImage
                     alt={img.title}
-                    src={`http://localhost:5000${img.thumbnailUrl || img.url}`}
+                    src={`http://localhost:5001${img.thumbnailUrl || img.url}`}
                     effect="opacity"
                     wrapperClassName="w-full h-full block"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
@@ -243,7 +271,7 @@ const GalleryDetailPage = () => {
         close={() => setLightboxIdx(-1)}
         slides={slides}
         plugins={[Zoom, Download]}
-        on={{ download: ({ slide }) => handleDownload(slide.src, slide.imageId) }}
+        download={{ download: ({ slide }) => handleDownload(slide.src, slide.imageId) }}
         styles={{ container: { background: 'rgb(10 10 20 / 0.96)', backdropFilter: 'blur(20px)' } }}
       />
     </>

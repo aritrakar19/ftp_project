@@ -5,7 +5,7 @@ import { protect, admin } from '../middleware/auth.js';
 const router = express.Router();
 
 router.route('/')
-  .get(protect, getGalleries)
+  .get(getGalleries)
   .post(protect, createGallery);  // any logged-in user can create a gallery
 
 router.route('/:id')

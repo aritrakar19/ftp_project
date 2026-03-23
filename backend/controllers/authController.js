@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import admin from '../config/firebaseSetup.js';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -109,5 +110,47 @@ export const googleLogin = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Sync Firebase user to MongoDB
+// @route   POST /api/auth/sync
+// @access  Public
+export const syncFirebaseUser = async (req, res) => {
+  const { token } = req.body;
+  if (!token) {
+    return res.status(400).json({ message: 'No token provided' });
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const { uid, email, name } = decodedToken;
+
+    let user = await User.findOne({ email });
+
+    if (user) {
+      if (!user.firebaseUid) {
+        user.firebaseUid = uid;
+        await user.save();
+      }
+    } else {
+      user = await User.create({
+        name: name || email.split('@')[0],
+        email,
+        firebaseUid: uid,
+        role: 'user',
+      });
+    }
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    console.error('Error syncing Firebase user:', error.message);
+    res.status(401).json({ message: 'Invalid or expired Firebase token' });
   }
 };

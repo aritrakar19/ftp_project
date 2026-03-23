@@ -27,9 +27,12 @@ export const protect = async (req, res, next) => {
 
       // Attempt 2: Fallback to Firebase JWT decoding if no dbUser yet
       if (!dbUser) {
-        const decodedFirebase = jwt.decode(token);
-        if (!decodedFirebase || !decodedFirebase.email) {
-          throw new Error('Invalid token format');
+        let decodedFirebase;
+        try {
+          const admin = (await import('../config/firebaseSetup.js')).default;
+          decodedFirebase = await admin.auth().verifyIdToken(token);
+        } catch (err) {
+          throw new Error('Invalid token format or not a Firebase token');
         }
 
         dbUser = await User.findOne({ email: decodedFirebase.email }).select('-password');
@@ -39,8 +42,8 @@ export const protect = async (req, res, next) => {
           dbUser = await User.create({
             name: decodedFirebase.name || decodedFirebase.email.split('@')[0],
             email: decodedFirebase.email,
-            googleId: decodedFirebase.user_id || decodedFirebase.sub,
-            role: 'client',
+            firebaseUid: decodedFirebase.uid,
+            role: 'user',
           });
         }
       }

@@ -3,14 +3,10 @@ import Image from '../models/Image.js';
 
 // @desc    Get all galleries (with image counts)
 // @route   GET /api/galleries
-// @access  Private
+// @access  Public
 export const getGalleries = async (req, res) => {
   try {
-    const query = req.user.role === 'admin'
-      ? {}
-      : { $or: [{ createdBy: req.user._id }, { allowedUsers: req.user._id }] };
-
-    const galleries = await Gallery.find(query)
+    const galleries = await Gallery.find({})
       .populate('createdBy', 'name')
       .sort({ createdAt: -1 });
 

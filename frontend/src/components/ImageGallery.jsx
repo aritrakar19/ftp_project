@@ -4,13 +4,41 @@ import Lightbox from 'yet-another-react-lightbox';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import Download from 'yet-another-react-lightbox/plugins/download';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const ImageGallery = ({ images }) => {
   const [index, setIndex] = useState(-1);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const handleDownload = async (url, id) => {
-    try { await api.post(`/images/${id}/download`); }
-    catch (err) { console.error('Failed to log download', err); }
+    if (!user) {
+      alert("Please log in to download images.");
+      navigate('/login');
+      return;
+    }
+    try {
+      await api.post(`/images/${id}/download`);
+      // Force download via Blob to avoid cross-origin new tab opening
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = url.split('/').pop() || 'image';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        alert("Access Denied: You do not have permission to download this image. Please request access from an admin.");
+      } else {
+        alert("Download failed. Please try again later.");
+      }
+    }
   };
 
   if (!images || images.length === 0) {
@@ -98,8 +126,8 @@ const ImageGallery = ({ images }) => {
         close={() => setIndex(-1)}
         slides={slides}
         plugins={[Zoom, Download]}
-        on={{
-          download: ({ slide }) => handleDownload(slide.src, slide.imageId),
+        download={{
+          download: ({ slide }) => handleDownload(slide.src, slide.imageId)
         }}
         styles={{
           container: { background: 'rgb(10 10 20 / 0.95)', backdropFilter: 'blur(20px)' },

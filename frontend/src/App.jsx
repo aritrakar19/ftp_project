@@ -14,6 +14,12 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const RootRedirect = () => {
+  const { user } = useAuth();
+  if (user?.role === 'admin') return <Navigate to="/dashboard" replace />;
+  return <Navigate to="/galleries" replace />;
+};
+
 function App() {
   return (
     <Router>
@@ -22,38 +28,17 @@ function App() {
           <Navbar />
           <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <Routes>
-              {/* Default: redirect / → /galleries */}
-              <Route path="/" element={<Navigate to="/galleries" replace />} />
+              {/* Redirect based on role */}
+              <Route path="/" element={<RootRedirect />} />
 
               {/* Gallery hub (sidebar + card grid) */}
-              <Route
-                path="/galleries"
-                element={
-                  <ProtectedRoute>
-                    <GalleriesPage />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/galleries" element={<GalleriesPage />} />
 
               {/* Individual gallery detail */}
-              <Route
-                path="/galleries/:id"
-                element={
-                  <ProtectedRoute>
-                    <GalleryDetailPage />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/galleries/:id" element={<GalleryDetailPage />} />
 
               {/* Old flat image browsing page (kept for backwards compat) */}
-              <Route
-                path="/browse"
-                element={
-                  <ProtectedRoute>
-                    <GalleryPage />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/browse" element={<GalleryPage />} />
 
               <Route path="/login"  element={<Login />} />
               <Route path="/signup" element={<Signup />} />

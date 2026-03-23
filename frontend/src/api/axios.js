@@ -3,7 +3,7 @@ import { getAuth } from 'firebase/auth';
 import { app } from '../firebase';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: 'http://localhost:5001/api',
 });
 
 // Request interceptor for adding the bearer token

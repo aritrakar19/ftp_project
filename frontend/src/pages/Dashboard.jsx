@@ -6,6 +6,9 @@ import {
 } from 'lucide-react';
 import UploadModal from '../components/UploadModal';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
+import UserManagement from '../components/admin/UserManagement';
+import AccessControl from '../components/admin/AccessControl';
 
 /* ─── Stat Card ─────────────────────────────────────────────── */
 const CARD_ACCENTS = {
@@ -156,6 +159,8 @@ const Dashboard = () => {
   const [gallerySections, setGallerySections] = useState([]);
   const [searchQuery, setSearchQuery]         = useState('');
   const [loading, setLoading]                 = useState(true);
+  const [activeTab, setActiveTab]             = useState('galleries');
+  const { user } = useAuth();
 
   const fetchData = async () => {
     setLoading(true);
@@ -215,9 +220,18 @@ const Dashboard = () => {
   return (
     <>
       <div className="space-y-8">
+        {user?.role === 'admin' && (
+          <div className="flex flex-wrap gap-2 border-b border-white/10 pb-4 mb-6">
+            <button onClick={() => setActiveTab('galleries')} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'galleries' ? 'bg-purple-500/20 text-purple-300' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>Galleries & Photos</button>
+            <button onClick={() => setActiveTab('users')} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'users' ? 'bg-purple-500/20 text-purple-300' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>User Management</button>
+            <button onClick={() => setActiveTab('access')} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === 'access' ? 'bg-purple-500/20 text-purple-300' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>Access Control</button>
+          </div>
+        )}
 
-        {/* ── Page header ── */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        {activeTab === 'users' ? <UserManagement /> : activeTab === 'access' ? <AccessControl /> : (
+          <>
+            {/* ── Page header ── */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-white">
               Dashboard
@@ -303,6 +317,8 @@ const Dashboard = () => {
               />
             ))}
           </div>
+        )}
+          </>
         )}
       </div>
 

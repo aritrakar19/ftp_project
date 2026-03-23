@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 
 import authRoutes from './routes/authRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 import galleryRoutes from './routes/galleryRoutes.js';
 import imageRoutes from './routes/imageRoutes.js';
 import ftpImageRoutes from './routes/ftpImageRoutes.js';
@@ -32,6 +33,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/galleries', galleryRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/ftp-images', ftpImageRoutes);

@@ -10,6 +10,7 @@ import {
   updateProfile
 } from "firebase/auth";
 import { app } from '../firebase'; // initialized in firebase.js
+import api from '../api/axios';
 
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
@@ -24,8 +25,26 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Listen for Firebase Auth state changes
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        try {
+          const token = await currentUser.getIdToken();
+          // Call backend to sync user details and get JWT
+          const { data: backendUser } = await api.post('/auth/sync', { token });
+          
+          localStorage.setItem('token', backendUser.token);
+          localStorage.setItem('userInfo', JSON.stringify(backendUser));
+          
+          setUser({ ...currentUser, ...backendUser });
+        } catch (error) {
+          console.error("Failed to sync user with backend:", error);
+          setUser(currentUser);
+        }
+      } else {
+        localStorage.removeItem('token');
+        localStorage.removeItem('userInfo');
+        setUser(null);
+      }
       setLoading(false);
     });
 

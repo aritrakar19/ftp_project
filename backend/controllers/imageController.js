@@ -65,40 +65,6 @@ export const getImages = async (req, res) => {
   const page     = Number(req.query.pageNumber) || 1;
 
   try {
-    /* ── 1. Collect allowed gallery IDs ── */
-    let allowedGalleryIds = [];
-    if (req.user.role === 'admin') {
-      const all = await Gallery.find({}).select('_id');
-      allowedGalleryIds = all.map(g => g._id);
-    } else {
-      const mine = await Gallery.find({
-        $or: [{ createdBy: req.user._id }, { allowedUsers: req.user._id }],
-      }).select('_id');
-      allowedGalleryIds = mine.map(g => g._id);
-    }
-
-    /* ── 2. Visibility clause ── */
-    let visibilityClause;
-    if (req.query.galleryId) {
-      // Specific gallery — verify access
-      if (
-        req.user.role !== 'admin' &&
-        !allowedGalleryIds.some(id => id.toString() === req.query.galleryId)
-      ) {
-        return res.status(403).json({ message: 'Access denied to this gallery' });
-      }
-      visibilityClause = { galleryId: req.query.galleryId };
-    } else {
-      // Allowed galleries + own no-gallery uploads
-      visibilityClause = {
-        $or: [
-          { galleryId: { $in: allowedGalleryIds } },
-          { galleryId: null, uploadedBy: req.user._id },
-        ],
-      };
-    }
-
-    /* ── 3. Keyword clause (optional) ── */
     const keywordClause = req.query.keyword
       ? {
           $or: [
@@ -107,12 +73,11 @@ export const getImages = async (req, res) => {
             { event: { $regex: req.query.keyword, $options: 'i' } },
           ],
         }
-      : null;
+      : {};
 
-    /* ── 4. Combine with $and ── */
-    const filter = keywordClause
-      ? { $and: [visibilityClause, keywordClause] }
-      : visibilityClause;
+    const filter = req.query.galleryId 
+      ? { ...keywordClause, galleryId: req.query.galleryId }
+      : keywordClause;
 
     const count  = await Image.countDocuments(filter);
     const images = await Image.find(filter)
@@ -138,8 +103,13 @@ export const logDownload = async (req, res) => {
     if (!image) return res.status(404).json({ message: 'Image not found' });
 
     if (req.user.role !== 'admin') {
-      const isAllowed = image.galleryId && image.galleryId.allowedUsers && image.galleryId.allowedUsers.includes(req.user._id);
-      if (!isAllowed) {
+      const allowedGalleryUsers = image.galleryId?.allowedUsers?.map(id => id.toString()) || [];
+      const allowedImageUsers = image.allowedUsers?.map(id => id.toString()) || [];
+
+      const isGalleryAllowed = allowedGalleryUsers.includes(req.user._id.toString());
+      const isImageAllowed = allowedImageUsers.includes(req.user._id.toString());
+
+      if (!isGalleryAllowed && !isImageAllowed) {
         return res.status(403).json({ message: 'Not authorized to download this image' });
       }
     }
