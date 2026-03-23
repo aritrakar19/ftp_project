@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Plus, Image as ImageIcon, FolderOpen, ArrowUpRight,
-  Layers, Search, TrendingUp,
+  Layers, Search, TrendingUp, Images, Lock,
 } from 'lucide-react';
 import UploadModal from '../components/UploadModal';
 import api from '../api/axios';
@@ -46,58 +47,106 @@ const StatCard = ({ title, value, icon: Icon, trend, color = 'violet' }) => {
   );
 };
 
-/* ─── Gallery Section ────────────────────────────────────────── */
-const GallerySection = ({ gallery, images }) => (
-  <div className="glass rounded-2xl overflow-hidden">
-    {/* Header */}
-    <div
-      className="flex items-center gap-3 px-5 py-4 border-b"
-      style={{ borderColor: 'rgb(255 255 255 / 0.07)' }}
-    >
-      <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{ background: 'linear-gradient(135deg,#8b5cf6,#6366f1)' }}
-      >
-        <FolderOpen className="w-4 h-4 text-white" />
-      </div>
-      <div>
-        <h2 className="text-sm font-bold text-white">{gallery?.title ?? 'Uncategorised'}</h2>
-        <p className="text-xs" style={{ color: 'rgb(148 150 180)' }}>
-          {images.length} photo{images.length !== 1 ? 's' : ''}
-        </p>
-      </div>
-    </div>
+/* ─── Gallery Card (box/card style) ─────────────────────────── */
+const GalleryCard = ({ gallery, images }) => {
+  const coverImg = gallery?.resolvedCover
+    ? `http://localhost:5000${gallery.resolvedCover}`
+    : images[0]
+      ? `http://localhost:5000${images[0].thumbnailUrl || images[0].url}`
+      : null;
 
-    {/* Grid */}
-    {images.length === 0 ? (
-      <div className="flex items-center justify-center h-24 text-sm" style={{ color: 'rgb(100 100 130)' }}>
-        No images yet
-      </div>
-    ) : (
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-0.5 p-0.5">
-        {images.map(img => (
+  const title = gallery?.title ?? 'Uncategorised';
+  const count = images.length;
+  const isPrivate = gallery?.isPrivate;
+  const to = gallery ? `/galleries/${gallery._id}` : '#';
+
+  return (
+    <Link
+      to={to}
+      className="group block relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1"
+      style={{
+        background: 'rgb(255 255 255 / 0.04)',
+        border: '1px solid rgb(255 255 255 / 0.08)',
+        boxShadow: '0 2px 12px rgb(0 0 0 / 0.15)',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.boxShadow = '0 16px 40px rgb(0 0 0 / 0.35), 0 0 0 1px rgb(139 92 246 / 0.25)';
+        e.currentTarget.style.borderColor = 'rgb(139 92 246 / 0.3)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.boxShadow = '0 2px 12px rgb(0 0 0 / 0.15)';
+        e.currentTarget.style.borderColor = 'rgb(255 255 255 / 0.08)';
+      }}
+    >
+      {/* Cover Image */}
+      <div className="relative w-full aspect-[4/3] overflow-hidden" style={{ background: 'rgb(255 255 255 / 0.03)' }}>
+        {coverImg ? (
+          <img
+            src={coverImg}
+            alt={title}
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+          />
+        ) : (
           <div
-            key={img._id}
-            className="relative aspect-square overflow-hidden group bg-white/5 rounded-sm"
+            className="w-full h-full flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, rgb(139 92 246 / 0.1), rgb(99 102 241 / 0.06))' }}
           >
-            <img
-              src={`http://localhost:5000${img.thumbnailUrl || img.url}`}
-              alt={img.title}
-              loading="lazy"
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-            />
-            <div
-              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-1.5"
-              style={{ background: 'linear-gradient(to top,rgb(0 0 0/0.7),transparent)' }}
-            >
-              <p className="text-white text-[9px] font-medium leading-tight truncate w-full">{img.title}</p>
-            </div>
+            <Images className="w-10 h-10" style={{ color: 'rgb(139 92 246 / 0.3)' }} />
           </div>
-        ))}
+        )}
+
+        {/* Dark gradient overlay */}
+        <div
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(to top, rgb(10 10 20 / 0.7) 0%, transparent 55%)' }}
+        />
+
+        {/* Private badge */}
+        {isPrivate && (
+          <div
+            className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+            style={{ background: 'rgb(239 68 68 / 0.85)', backdropFilter: 'blur(8px)', color: '#fff' }}
+          >
+            <Lock className="w-3 h-3" /> Private
+          </div>
+        )}
+
+        {/* Photo count badge */}
+        <div className="absolute bottom-3 left-3">
+          <span
+            className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+            style={{ background: 'rgb(0 0 0 / 0.55)', backdropFilter: 'blur(8px)', color: 'rgb(220 220 240)' }}
+          >
+            {count} {count === 1 ? 'photo' : 'photos'}
+          </span>
+        </div>
       </div>
-    )}
-  </div>
-);
+
+      {/* Info row */}
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{ background: 'linear-gradient(135deg,#8b5cf6,#6366f1)' }}
+        >
+          <FolderOpen className="w-4 h-4 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-white truncate group-hover:text-purple-300 transition-colors">
+            {title}
+          </h3>
+          <p className="text-[11px]" style={{ color: 'rgb(148 150 180)' }}>
+            {gallery?.event || gallery?.category || 'Gallery'}
+          </p>
+        </div>
+        <ArrowUpRight
+          className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          style={{ color: '#a78bfa' }}
+        />
+      </div>
+    </Link>
+  );
+};
 
 /* ─── Dashboard ──────────────────────────────────────────────── */
 const Dashboard = () => {
@@ -146,7 +195,6 @@ const Dashboard = () => {
     }
   };
 
-
   useEffect(() => { fetchData(); }, []);
 
   const filteredSections = gallerySections
@@ -175,7 +223,7 @@ const Dashboard = () => {
               Dashboard
             </h1>
             <p className="mt-1 text-sm" style={{ color: 'rgb(148 150 180)' }}>
-              All your images, organised by gallery
+              All your galleries and images, organised for you
             </p>
           </div>
           <button
@@ -213,10 +261,21 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* ── Gallery Sections ── */}
+        {/* ── Gallery Grid ── */}
         {loading ? (
-          <div className="flex justify-center items-center h-48">
-            <div className="spin-ring" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="rounded-2xl overflow-hidden animate-pulse" style={{ background: 'rgb(255 255 255 / 0.04)', border: '1px solid rgb(255 255 255 / 0.07)' }}>
+                <div className="w-full aspect-[4/3]" style={{ background: 'rgb(255 255 255 / 0.06)' }} />
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="w-8 h-8 rounded-lg flex-shrink-0" style={{ background: 'rgb(255 255 255 / 0.08)' }} />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3.5 rounded-full w-3/4" style={{ background: 'rgb(255 255 255 / 0.08)' }} />
+                    <div className="h-2.5 rounded-full w-1/2" style={{ background: 'rgb(255 255 255 / 0.05)' }} />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : filteredSections.length === 0 ? (
           <div
@@ -231,13 +290,13 @@ const Dashboard = () => {
             </div>
             <p className="font-semibold text-white mb-1">No photos yet</p>
             <p className="text-sm" style={{ color: 'rgb(148 150 180)' }}>
-              Click "Upload Photos" to get started.
+              Click &quot;Upload Photos&quot; to get started.
             </p>
           </div>
         ) : (
-          <div className="space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {filteredSections.map(section => (
-              <GallerySection
+              <GalleryCard
                 key={section.gallery?._id || '__none__'}
                 gallery={section.gallery}
                 images={section.images}
